@@ -1,3 +1,21 @@
+/*
+
+Available Global Events:
+
+$('body').bind('variant_selected', function(ev, variant, options) {
+  console.log(variant, options)
+});
+
+$('body').bind('variant_reset', function(ev) {
+  console.log('reset')
+});
+
+$('body').bind('inventory_updated', function(ev, variants) {
+  console.log(variants)
+});
+
+*/
+
 $.extend({
   keys: function(obj){
     var a = [];
@@ -29,6 +47,35 @@ if (!Array.find_matches) Array.find_matches = function(a) {
   }
   return m;
 }
+
+var select_variant = function(variant) {
+  var options = {};
+  show_variant_images(variant.id);
+  $('#product-variants .variant-option-values').each(function() {
+    var type = $(this).siblings('.variant-option-type').eq(0).text();
+    options[type] = $.map($(this).find('a.option-value.selected'), function(i) {
+      return $(i).text()
+    }).join(" ");
+  });
+  $.event.trigger('variant_selected', [variant, options]);
+}
+
+var reset_variant = function() {
+  $('li.vtmb').hide();
+  $('li.tmb-all').show();
+  
+  var thumb = $($('ul.thumbnails li:visible').eq(0));
+  var newImg = thumb.find('a').attr('href');
+  $('ul.thumbnails li').removeClass('selected');
+  thumb.addClass('selected');
+  $('#main-image img').attr('src', newImg);
+  $("#main-image").data('selectedThumb', newImg);
+  $("#main-image").data('selectedThumbId', thumb.attr('id'));
+  
+  $.event.trigger('variant_reset');
+}
+
+VARIANT_OPTIONS_UNSELECTED_TEXT = '(select)';
 
 function VariantOptions(options, allow_backorders) {
   
@@ -101,6 +148,7 @@ function VariantOptions(options, allow_backorders) {
         $(element).addClass(count ? 'in-stock' : 'out-of-stock');        
       }
     });
+    $.event.trigger('inventory_updated', [variants]);
   }
   
   function get_variant_objects(rels) {
@@ -150,9 +198,9 @@ function VariantOptions(options, allow_backorders) {
         return to_f(a) < to_f(b) ? -1 : 1;
       });
       if (prices.length == 1) {
-        $('.prices .price').html('<span class="price assumed">' + prices[0] + '</span>');  
+        $('#product-price dd').html('<span class="price selling">' + prices[0] + '</span>');
       } else { 
-        $('.prices .price').html('<span class="price from">' + prices[0] + '</span> - <span class="price to">' + prices[prices.length - 1] + '</span>');
+        $('#product-price dd').html('<span class="price selling from">' + prices[0] + '</span> - <span class="price selling to">' + prices[prices.length - 1] + '</span>');
       }
       return false;
     }
@@ -161,17 +209,18 @@ function VariantOptions(options, allow_backorders) {
   function toggle() {
     if (variant) {
       $('#variant_id').val(variant.id);
-      $('.prices .price').removeClass('unselected').text(variant.price);      
+      $('#product-price dd').html('<span class="price selling">' + variant.price + '</span>');
       $('button[type=submit]').attr('disabled', false).fadeTo(100, 1);
       try {
-        select_variant(variant.id, $.map($('a.selected'), function(i) { return $(i).text() }).join(" "));
+        select_variant(variant);
       } catch(error) {
         // depends on modified version of product.js  
       }
     } else {
       $('#variant_id').val('');
       $('button[type=submit]').attr('disabled', true).fadeTo(0, 0.5);
-      $('.prices .price').addClass('unselected').text('(select)');
+      $('#product-price dd').html('<span class="price selling unselected">' + VARIANT_OPTIONS_UNSELECTED_TEXT + '</span>');
+      reset_variant();
     }    
   }
   
@@ -185,7 +234,6 @@ function VariantOptions(options, allow_backorders) {
       $(element).find('a.clear-button').hide();
     });
   }
-   
   
   function handle_clear(evt) {
     evt.preventDefault();

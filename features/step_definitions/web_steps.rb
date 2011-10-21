@@ -9,7 +9,7 @@ def get_parent(parent)
     when "first set of options";  "#option_type_#{@product.option_types.first.id}"
     when "second set of options"; "#option_type_#{@product.option_types[1].id}"
     when "variant images label";  "#variant-images"
-    when "price"; ".prices .price"    
+    when "price"; "#product-price dd"    
     else "[set-your-parent] #{parent}"
   end
 end
@@ -28,18 +28,15 @@ Given /^I'm on the ((?!page).*) page$/ do |path|
 end
 
 Given /^I'm on the ((?!page).*) page for (.*)$/ do |path, id|
-  id = case id
+  case id
     when "the first product"
-      @product ||= Product.last
-    when 'option type "Size"'
-      @option_type = OptionType.find_by_presentation!("Size")
-    else id
+      id = @product ||= Product.last
   end
   path = "#{path.downcase.gsub(/\s/, '_')}_path".to_sym
   begin 
     visit send(path, id)
   rescue 
-    puts "#{path}(#{id.to_param}) could not be found!"
+    puts "#{path} could not be found!"
   end
 end
 
